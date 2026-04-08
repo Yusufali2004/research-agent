@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -26,7 +27,6 @@ Paragraph 4: Paper organization ("Section II describes...")
 II. METHODOLOGY (Heading 1)
 A. Subsection Heading (Title Case, italic if needed)
 Detailed technical approach. Passive voice. Formal academic tone.
-Describe system architecture, algorithms, tools used.
 
 III. RESULTS AND DISCUSSION (Heading 1)
 Present findings and metrics from the content only.
@@ -38,41 +38,72 @@ Paragraph 2: Limitations.
 Paragraph 3: Future work directions.
 
 ACKNOWLEDGMENT (unnumbered heading)
-Optional. Sponsor/funding acknowledgment.
 
 REFERENCES (unnumbered heading)
 [1] A. Author, "Title of paper," Journal Name, vol. X, no. X, pp. XX-XX, Year.
 """
+
+def extract_json(text: str) -> dict:
+    # Remove markdown code blocks
+    text = text.replace("```json", "").replace("```", "").strip()
+    
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except:
+        pass
+    
+    # Find JSON object using regex
+    match = re.search(r'\{[\s\S]*\}', text)
+    if match:
+        try:
+            return json.loads(match.group())
+        except:
+            pass
+    
+    # Last resort — return error structure
+    return {
+        "Title": "Parse Error",
+        "Authors": "",
+        "Abstract": "Failed to parse AI response. Please try again.",
+        "Keywords": "",
+        "Introduction": text[:500],
+        "Methodology": "",
+        "Results": "",
+        "Conclusion": "",
+        "Acknowledgment": "",
+        "References": ""
+    }
 
 def generate_full_paper(content: str, template: str) -> dict:
     prompt = f"""You are a strict IEEE conference paper formatter.
 
 YOUR ONLY JOB: Take the raw research content below and restructure it into a properly formatted IEEE conference paper.
 
-STRICT RULES — YOU MUST FOLLOW ALL OF THESE:
-1. Use ONLY information from the provided content. Do NOT add any external knowledge, invented data, or filler text.
-2. Do NOT change the meaning, results, or claims made in the original content.
-3. If information for a section is missing from the content, write: "[Insufficient data in source content for this section]"
-4. Do NOT use bullet points anywhere in the output.
-5. Write in formal academic English. Third person. Passive voice preferred.
-6. Each section must be properly structured per IEEE format.
-7. Abstract must start with "Abstract—" and be 150-250 words.
-8. Section headings must use Roman numerals: I. INTRODUCTION, II. METHODOLOGY, etc.
-9. References must follow IEEE format: [1] A. Author, "Title," Journal, vol., pp., Year.
-10. Do NOT include any meta-commentary, explanations, or notes about what you are doing.
+STRICT RULES:
+1. Use ONLY information from the provided content. Do NOT add external knowledge or invented data.
+2. Do NOT change meaning, results, or claims from the original content.
+3. If information for a section is missing, write: "[Insufficient data in source content]"
+4. Do NOT use bullet points anywhere.
+5. Formal academic English. Third person. Passive voice preferred.
+6. Abstract must start with "Abstract—" and be 150-250 words.
+7. Section headings use Roman numerals: I. INTRODUCTION, II. METHODOLOGY, etc.
+8. References follow IEEE format: [1] A. Author, "Title," Journal, vol., pp., Year.
+9. Do NOT include any commentary or explanation outside the JSON.
 
-IEEE PAPER STRUCTURE TO FOLLOW:
+IEEE STRUCTURE:
 {IEEE_TEMPLATE}
 
 RAW RESEARCH CONTENT (use ONLY this):
 {content}
 
-Return ONLY valid JSON in this exact format with no extra text before or after:
+YOU MUST return ONLY a valid JSON object. No text before or after. No markdown. No explanation.
+Exact format:
 {{
     "Title": "...",
-    "Authors": "...",
+    "Authors": "Author Name, Department, Institution, City, Country, email@domain.com",
     "Abstract": "Abstract— ...",
-    "Keywords": "...",
+    "Keywords": "keyword1, keyword2, keyword3",
     "Introduction": "I. INTRODUCTION\\n\\n...",
     "Methodology": "II. METHODOLOGY\\n\\n...",
     "Results": "III. RESULTS AND DISCUSSION\\n\\n...",
@@ -83,10 +114,18 @@ Return ONLY valid JSON in this exact format with no extra text before or after:
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an IEEE paper formatter. You respond ONLY with valid JSON. Never add text outside the JSON object."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.2,
     )
 
     text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(text)
+    return extract_json(text)

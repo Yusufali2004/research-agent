@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.database import Base, engine
 from app.routes.upload import router as upload_router
 from app.routes.generate import router as generate_router
+from app.routes.export import router as export_router
+
 
 app = FastAPI(
     title="ResearchMate AI",
@@ -10,8 +13,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -20,12 +25,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
 app.include_router(upload_router)
 app.include_router(generate_router)
+app.include_router(export_router)
+
 
 @app.get("/")
 def root():
     return {"status": "ResearchMate AI backend is running"}
+
 
 @app.get("/health")
 def health():
