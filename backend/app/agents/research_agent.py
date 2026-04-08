@@ -123,7 +123,12 @@ STRICT RULES:
 6. Abstract MUST start exactly with "Abstract—".
 7. Keywords MUST be a comma-separated list ONLY. Do not write "Keywords:" or "Index Terms:".
 8. FIGURES: If the raw content contains a tag like [IMAGE: filename.png], you MUST include that exact tag on its own line. On the very next line, write the caption like: "Fig. 1. Description of figure."
-
+9. TABLES: If the raw content contains tabular data, you MUST format it strictly as a Markdown table using pipes (|). 
+Example:
+| Column 1 | Column 2 |
+|---|---|
+| Data 1 | Data 2 |
+Table captions MUST be placed on the line immediately above the table, formatted exactly like: "Table I. Description of table."
 RAW RESEARCH CONTENT:
 {content}
 
