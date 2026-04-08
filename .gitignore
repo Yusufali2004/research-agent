@@ -2,7 +2,6 @@
 __pycache__/
 *.py[cod]
 *.pyo
-.env
 .venv
 venv/
 ENV/
@@ -23,8 +22,10 @@ out/
 frontend/.env
 frontend/.env.local
 frontend/.env.production
+frontend/.env*.local
 npm-debug.log*
 yarn-debug.log*
+*.log
 
 # VS Code
 .vscode/
@@ -41,4 +42,9 @@ chroma_db/
 backend/uploads/
 
 # Docker
-*.log
+docker-compose.override.yml
+
+# Environment files (catch all)
+.env
+.env.*
+!.env.example
