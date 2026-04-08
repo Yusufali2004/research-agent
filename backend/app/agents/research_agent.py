@@ -1,41 +1,41 @@
 import os
-import time
+import json
 from dotenv import load_dotenv
-from google import genai
+from groq import Groq
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-def generate_section(section: str, content: str, template: str) -> str:
+def generate_full_paper(content: str, template: str) -> dict:
     prompt = f"""
 You are an expert academic research paper writer.
-Based on the following raw research content, write the {section} section 
-of a research paper following {template} format.
+Based on the following raw research content, generate a complete research paper 
+following {template} format. DO NOT add any additional information or semmantic changes.
+Your job is to strictly Format the data accuratly 
 
 Raw Content:
 {content}
 
+Generate all sections in this exact JSON format, return ONLY the JSON nothing else:
+{{
+    "Abstract": "...",
+    "Introduction": "...",
+    "Methodology": "...",
+    "Results": "...",
+    "Conclusion": "..."
+}}
+
 Rules:
 - Be formal and academic in tone
-- Be concise but comprehensive
 - Follow {template} formatting standards
-- Only return the {section} section content, nothing else
+- Each section must be detailed and comprehensive
 """
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
     )
-    return response.text
 
-
-def generate_full_paper(content: str, template: str) -> dict:
-    sections = ["Abstract", "Introduction", "Methodology", "Results", "Conclusion"]
-    paper = {}
-
-    for section in sections:
-        print(f"Generating {section}...")
-        paper[section] = generate_section(section, content, template)
-        time.sleep(3)  # avoid rate limiting
-
-    return paper
+    text = response.choices[0].message.content.strip()
+    text = text.replace("```json", "").replace("```", "").strip()
+    return json.loads(text)
