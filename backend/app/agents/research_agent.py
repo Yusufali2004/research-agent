@@ -122,7 +122,7 @@ STRICT RULES:
 5. Section headings MUST use Roman numerals exactly like this: I. INTRODUCTION, II. METHODOLOGY, etc.
 6. Abstract MUST start exactly with "Abstract—".
 7. Keywords MUST be a comma-separated list ONLY. Do not write "Keywords:" or "Index Terms:".
-8. FIGURES: If the content mentions figures or tables, write "Fig. 1. Description of figure." on a new line.
+8. FIGURES: If the raw content contains a tag like [IMAGE: filename.png], you MUST include that exact tag on its own line. On the very next line, write the caption like: "Fig. 1. Description of figure."
 
 RAW RESEARCH CONTENT:
 {content}

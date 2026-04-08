@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
@@ -7,9 +8,11 @@ from pydantic import BaseModel
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
+from reportlab.lib.units import mm, inch
+from reportlab.lib import colors
 from reportlab.platypus import (
-    Paragraph, FrameBreak, NextPageTemplate, PageTemplate, Frame
+    Paragraph, FrameBreak, NextPageTemplate, PageTemplate, Frame,
+    Image as RLImage, Spacer
 )
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.platypus.doctemplate import BaseDocTemplate
@@ -18,6 +21,9 @@ router = APIRouter(prefix="/export", tags=["export"])
 
 OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# The directory where upload.py saves the images
+UPLOAD_DIR = "uploads" 
 
 SECTION_ORDER = [
     "Title", "Authors", "Abstract", "Keywords",
@@ -79,7 +85,7 @@ async def export_pdf(request: ExportRequest):
     h2 = style("H2",       fontName="Times-Italic",fontSize=10, alignment=TA_LEFT,   spaceBefore=6,  spaceAfter=4, leading=12)
     bd = style("Body",     fontName="Times-Roman", fontSize=10, alignment=TA_JUSTIFY, spaceAfter=0,  leading=12)
     rf = style("Ref",      fontName="Times-Roman", fontSize=8,  alignment=TA_JUSTIFY, spaceAfter=3,  leading=10, leftIndent=18, firstLineIndent=-18)
-    fg = style("Figure",   fontName="Times-Roman", fontSize=8,  alignment=TA_CENTER, spaceBefore=6,  spaceAfter=12)
+    fg = style("Figure",   fontName="Times-Roman", fontSize=8,  alignment=TA_CENTER, spaceBefore=6,  spaceAfter=12, textColor=colors.darkblue)
 
     story = []
     
@@ -114,6 +120,26 @@ async def export_pdf(request: ExportRequest):
             line = raw.strip()
             if not line:
                 continue
+            
+            # --- NEW: Image Placeholder Logic ---
+            img_match = re.search(r'\[IMAGE:\s*(.+?)\]', line, flags=re.IGNORECASE)
+            if img_match:
+                img_filename = img_match.group(1).strip()
+                img_path = os.path.join(UPLOAD_DIR, img_filename)
+                
+                # Check if image exists on the server
+                if os.path.exists(img_path):
+                    # 3 inches wide perfectly fits the IEEE column width
+                    story.append(RLImage(img_path, width=3*inch, height=2*inch, kind='proportional'))
+                    story.append(Spacer(1, 6))
+                else:
+                    story.append(Paragraph(f"<i>[Missing Image: {img_filename}]</i>", fg))
+                
+                # Strip the tag from the text line
+                line = re.sub(r'\[IMAGE:\s*(.+?)\]', '', line, flags=re.IGNORECASE).strip()
+                if not line:
+                    continue # Move to next line if there's no text left
+            # ------------------------------------
             
             if line.startswith("Fig.") or line.startswith("[Fig.") or line.startswith("Table"):
                 story.append(Paragraph(line, fg))
