@@ -21,8 +21,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        
-        ],
+        "https://research-agent-ecru.vercel.app", # Fixed syntax: added quotes and removed trailing slash for safety
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
