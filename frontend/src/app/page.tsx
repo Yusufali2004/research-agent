@@ -82,6 +82,9 @@ export default function Home() {
     if (!file) return;
     setUploading(true);
     setError("");
+    setPaper(null); // Reset paper state on new upload
+    setUploadedFilename(""); // Reset filename to reset UI progress
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -89,7 +92,6 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
       setUploadedFilename(data.filename);
-      setPaper(null);
     } catch (e: any) {
       setError(e.message || "Upload failed.");
     } finally {
@@ -101,7 +103,8 @@ export default function Home() {
     if (!uploadedFilename) return;
     setGenerating(true);
     setError("");
-    setPaper(null);
+    setPaper(null); // Clear previous paper data immediately
+    
     try {
       const res = await fetch(`${API}/generate/paper`, {
         method: "POST",
@@ -121,6 +124,7 @@ export default function Home() {
   async function handleExportPdf() {
     if (!paper) return;
     setExportingPdf(true);
+    setError("");
     try {
       const res = await fetch(`${API}/export/pdf`, {
         method: "POST",
@@ -132,7 +136,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "research_paper.pdf";
+      a.download = `${paper.Title?.substring(0, 20) || "research_paper"}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e: any) {
@@ -142,13 +146,11 @@ export default function Home() {
     }
   }
 
-  // 2. UPDATED DOCX EXPORT FUNCTION
   async function handleExportDocx() {
     if (!paper) return;
     setExportingDocx(true);
     setError("");
     try {
-      // Call the local TypeScript function directly
       await generateIEEEDocx(paper);
     } catch (e: any) {
       setError(e.message || "DOCX export failed.");
@@ -159,7 +161,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f6f5f2] py-12 px-4 font-serif">
-      {/* Header */}
       <div className="max-w-2xl mx-auto mb-10 text-center">
         <div className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-mono px-3 py-1 rounded-full mb-4 tracking-widest uppercase">
           AI Research Agent
@@ -173,7 +174,6 @@ export default function Home() {
       </div>
 
       <div className="max-w-2xl mx-auto space-y-5">
-        {/* Step indicators */}
         <div className="flex items-center gap-3 px-2 mb-2">
           <StepBadge n={1} active={step === 1} done={step > 1} />
           <div className={`flex-1 h-px transition-colors duration-300 ${step > 1 ? "bg-emerald-400" : "bg-slate-200"}`} />
@@ -183,7 +183,6 @@ export default function Home() {
           <span className="text-xs text-slate-400 font-sans ml-1">Done</span>
         </div>
 
-        {/* Step 1 — Upload */}
         <Card className="p-6 bg-white border-slate-100 shadow-sm space-y-4">
           <div className="flex items-center gap-3">
             <StepBadge n={1} active={step === 1} done={step > 1} />
@@ -200,6 +199,7 @@ export default function Home() {
                 setFile(e.target.files?.[0] || null);
                 setUploadedFilename("");
                 setPaper(null);
+                setError("");
               }}
               className="block w-full text-sm text-slate-500 font-sans
                 file:mr-3 file:py-1.5 file:px-4 file:rounded-md file:border-0
@@ -222,7 +222,6 @@ export default function Home() {
           )}
         </Card>
 
-        {/* Step 2 — Template + Generate */}
         <Card
           className={`p-6 bg-white border-slate-100 shadow-sm space-y-4 transition-opacity duration-300 ${
             !uploadedFilename ? "opacity-50 pointer-events-none" : ""
@@ -256,7 +255,6 @@ export default function Home() {
           </Button>
         </Card>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-sans flex items-start gap-2">
             <span className="mt-0.5">⚠</span>
@@ -264,7 +262,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Loading skeleton */}
         {generating && (
           <div className="space-y-3 animate-pulse">
             {[120, 60, 200, 160, 140].map((h, i) => (
@@ -273,10 +270,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Step 3 — Paper Preview + Export */}
         {paper && !generating && (
           <div className="space-y-4">
-            {/* Export bar */}
             <Card className="p-4 bg-slate-900 border-slate-900 flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <p className="text-white font-semibold text-sm">Paper ready!</p>
@@ -303,9 +298,7 @@ export default function Home() {
               </div>
             </Card>
 
-            {/* Paper sections in correct order */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-              {/* Paper title area */}
               {paper.Title && (
                 <div className="px-8 pt-8 pb-4 text-center border-b border-slate-100">
                   <h2 className="text-xl font-bold text-slate-900 leading-snug">{paper.Title}</h2>
@@ -315,7 +308,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Abstract + Keywords */}
               {paper.Abstract && (
                 <div className="px-8 py-5 border-b border-slate-100 bg-slate-50">
                   <p className="text-xs font-sans uppercase tracking-widest text-slate-400 mb-2">Abstract</p>
@@ -328,7 +320,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Body sections */}
               {SECTION_ORDER.filter(
                 (s) => !["Title", "Authors", "Abstract", "Keywords"].includes(s) && paper[s]
               ).map((section) => (
